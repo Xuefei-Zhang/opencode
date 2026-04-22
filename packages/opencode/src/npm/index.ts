@@ -23,10 +23,12 @@ export namespace Npm {
     return path.join(Global.Path.cache, "packages", pkg)
   }
 
-  function resolveEntryPoint(name: string, dir: string) {
+  async function resolveEntryPoint(name: string, dir: string) {
     let entrypoint: string | undefined
     try {
-      entrypoint = typeof Bun !== "undefined" ? import.meta.resolve(name, dir) : import.meta.resolve(dir)
+      if (typeof import.meta.resolve === "function") {
+        entrypoint = typeof Bun !== "undefined" ? await import.meta.resolve(name, dir) : await import.meta.resolve(name)
+      }
     } catch {}
     const result = {
       directory: dir,
@@ -72,7 +74,7 @@ export namespace Npm {
     if (tree) {
       const first = tree.edgesOut.values().next().value?.to
       if (first) {
-        return resolveEntryPoint(first.name, first.path)
+        return await resolveEntryPoint(first.name, first.path)
       }
     }
 
@@ -93,7 +95,7 @@ export namespace Npm {
 
     const first = result.edgesOut.values().next().value?.to
     if (!first) throw new InstallFailedError({ pkg })
-    return resolveEntryPoint(first.name, first.path)
+    return await resolveEntryPoint(first.name, first.path)
   }
 
   export async function install(dir: string) {
