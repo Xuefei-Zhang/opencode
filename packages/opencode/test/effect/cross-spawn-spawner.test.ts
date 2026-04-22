@@ -192,7 +192,7 @@ describe("cross-spawn spawner", () => {
       "allows providing standard input to a command",
       Effect.gen(function* () {
         const input = "a b c"
-        const stdin = Stream.make(Buffer.from(input, "utf-8"))
+        const stdin = Stream.make(new TextEncoder().encode(input))
         const handle = yield* js(
           'process.stdin.setEncoding("utf8"); let out = ""; process.stdin.on("data", (chunk) => out += chunk); process.stdin.on("end", () => process.stdout.write(out))',
           { stdin },

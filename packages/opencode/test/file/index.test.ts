@@ -90,7 +90,7 @@ describe("file/index Filesystem patterns", () => {
     test("reads binary file via Filesystem.readArrayBuffer()", async () => {
       await using tmp = await tmpdir()
       const filepath = path.join(tmp.path, "image.png")
-      const binaryContent = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      const binaryContent = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
       await fs.writeFile(filepath, binaryContent)
 
       await Instance.provide({
@@ -100,7 +100,7 @@ describe("file/index Filesystem patterns", () => {
           expect(result.type).toBe("text") // Images return as text with base64 encoding
           expect(result.encoding).toBe("base64")
           expect(result.mimeType).toBe("image/png")
-          expect(result.content).toBe(binaryContent.toString("base64"))
+          expect(result.content).toBe(Buffer.from(binaryContent).toString("base64"))
         },
       })
     })
@@ -108,7 +108,7 @@ describe("file/index Filesystem patterns", () => {
     test("returns empty for binary non-image files", async () => {
       await using tmp = await tmpdir()
       const filepath = path.join(tmp.path, "binary.so")
-      await fs.writeFile(filepath, Buffer.from([0x7f, 0x45, 0x4c, 0x46]), "binary")
+      await fs.writeFile(filepath, new Uint8Array([0x7f, 0x45, 0x4c, 0x46]))
 
       await Instance.provide({
         directory: tmp.path,
@@ -149,7 +149,7 @@ describe("file/index Filesystem patterns", () => {
 
       for (const { ext, mime } of testCases) {
         const filepath = path.join(tmp.path, `test.${ext}`)
-        await fs.writeFile(filepath, Buffer.from([0x00, 0x00, 0x00, 0x00]), "binary")
+        await fs.writeFile(filepath, new Uint8Array([0x00, 0x00, 0x00, 0x00]))
 
         await Instance.provide({
           directory: tmp.path,
@@ -360,7 +360,7 @@ describe("file/index Filesystem patterns", () => {
     test("returns base64 encoding for images", async () => {
       await using tmp = await tmpdir()
       const filepath = path.join(tmp.path, "test.jpg")
-      await fs.writeFile(filepath, Buffer.from([0xff, 0xd8, 0xff, 0xe0]), "binary")
+      await fs.writeFile(filepath, new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))
 
       await Instance.provide({
         directory: tmp.path,
@@ -506,13 +506,13 @@ describe("file/index Filesystem patterns", () => {
       await using tmp = await tmpdir({ git: true })
       const filepath = path.join(tmp.path, "data.bin")
       // Write content with null bytes so git treats it as binary
-      const binaryData = Buffer.alloc(256)
+      const binaryData = new Uint8Array(256)
       for (let i = 0; i < 256; i++) binaryData[i] = i
       await fs.writeFile(filepath, binaryData)
       await $`git add .`.cwd(tmp.path).quiet()
       await $`git commit --no-gpg-sign -m "add binary"`.cwd(tmp.path).quiet()
       // Modify the binary
-      const modified = Buffer.alloc(512)
+      const modified = new Uint8Array(512)
       for (let i = 0; i < 512; i++) modified[i] = i % 256
       await fs.writeFile(filepath, modified)
 
