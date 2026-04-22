@@ -8,6 +8,10 @@ import { pipeline } from "stream/promises"
 import { Glob } from "./glob"
 
 export namespace Filesystem {
+  function u8(input: Buffer | Uint8Array) {
+    return input instanceof Buffer ? new Uint8Array(input) : input
+  }
+
   // Fast sync version for metadata checks
   export async function exists(p: string): Promise<boolean> {
     return existsSync(p)
@@ -51,7 +55,7 @@ export namespace Filesystem {
 
   export async function readArrayBuffer(p: string): Promise<ArrayBuffer> {
     const buf = await readFile(p)
-    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+    return new Uint8Array(buf).buffer
   }
 
   function isEnoent(e: unknown): e is { code: "ENOENT" } {
@@ -59,19 +63,20 @@ export namespace Filesystem {
   }
 
   export async function write(p: string, content: string | Buffer | Uint8Array, mode?: number): Promise<void> {
+    const data = typeof content === "string" ? content : u8(content)
     try {
       if (mode) {
-        await writeFile(p, content, { mode })
+        await writeFile(p, data, { mode })
       } else {
-        await writeFile(p, content)
+        await writeFile(p, data)
       }
     } catch (e) {
       if (isEnoent(e)) {
         await mkdir(dirname(p), { recursive: true })
         if (mode) {
-          await writeFile(p, content, { mode })
+          await writeFile(p, data, { mode })
         } else {
-          await writeFile(p, content)
+          await writeFile(p, data)
         }
         return
       }
@@ -93,7 +98,23 @@ export namespace Filesystem {
       await mkdir(dir, { recursive: true })
     }
 
-    const nodeStream = stream instanceof ReadableStream ? Readable.fromWeb(stream as any) : stream
+    const nodeStream =
+      stream instanceof Readable
+        ? stream
+        : Readable.from(
+            (async function* () {
+              const reader = stream.getReader()
+              try {
+                while (true) {
+                  const chunk = await reader.read()
+                  if (chunk.done) return
+                  yield chunk.value
+                }
+              } finally {
+                reader.releaseLock()
+              }
+            })(),
+          )
     const writeStream = createWriteStream(p)
     await pipeline(nodeStream, writeStream)
 

@@ -138,7 +138,7 @@ export const ReadTool = Tool.define("read", {
           {
             type: "file",
             mime,
-            url: `data:${mime};base64,${Buffer.from(await Filesystem.readBytes(filepath)).toString("base64")}`,
+            url: `data:${mime};base64,${(await Filesystem.readBytes(filepath)).toString("base64")}`,
           },
         ],
       }
