@@ -22,9 +22,11 @@ declare global {
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
+type FetchInput = Parameters<typeof fetch>[0]
+type FetchInit = Parameters<typeof fetch>[1]
 
 function createWorkerFetch(client: RpcClient): typeof fetch {
-  const fn = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const fn = async (input: FetchInput, init?: FetchInit): Promise<Response> => {
     const request = new Request(input, init)
     const body = request.body ? await request.text() : undefined
     const result = await client.call("fetch", {
@@ -53,7 +55,7 @@ function createEventSource(client: RpcClient): EventSource {
 async function target() {
   if (typeof OPENCODE_WORKER_PATH !== "undefined") return OPENCODE_WORKER_PATH
   const dist = new URL("./cli/cmd/tui/worker.js", import.meta.url)
-  if (await Filesystem.exists(fileURLToPath(dist))) return dist
+  if (await Filesystem.exists(fileURLToPath(dist.href))) return dist
   return new URL("./worker.ts", import.meta.url)
 }
 
