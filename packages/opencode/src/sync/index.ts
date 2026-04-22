@@ -37,7 +37,23 @@ export namespace SyncEvent {
   let frozen = false
   let convertEvent: (type: string, event: Event["data"]) => Promise<Record<string, unknown>> | Record<string, unknown>
 
-  const Bus = new EventEmitter<{ event: [{ def: Definition; event: Event }] }>()
+  type Events = {
+    event: [{ def: Definition; event: Event }]
+  }
+
+  const bus = new EventEmitter()
+
+  const Bus = {
+    on<K extends keyof Events>(type: K, handler: (...args: Events[K]) => void) {
+      bus.on(type, handler)
+    },
+    off<K extends keyof Events>(type: K, handler: (...args: Events[K]) => void) {
+      bus.off(type, handler)
+    },
+    emit<K extends keyof Events>(type: K, ...args: Events[K]) {
+      bus.emit(type, ...args)
+    },
+  }
 
   export function reset() {
     frozen = false
